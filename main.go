@@ -86,7 +86,7 @@ func main() {
 	printBanner()
 
 	dryRun := flag.Bool("dryrun", true, "Only print URLs, no fuzzing")
-	outFile := flag.String("outfile", "", "Output file")
+	outFile := flag.String("file", "", "Output file")
 	flag.Parse()
 	flag.Usage = usage
 
