@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 	"waggers/internal/swagger"
 )
@@ -19,6 +20,8 @@ const banner = `
   \/\_/  (____  /\___  /\___  / \___  >__|  /____  >
               \//_____//_____/      \/           \/                                                   
 `
+
+var output *os.File
 
 func printBanner() {
 	fmt.Println(banner)
@@ -68,8 +71,15 @@ func buildApiPath(api *swagger.SwaggerApiProps) string {
 	return ret
 }
 
-func fuzz(url string, httpClient *http.Client) {
-	// nothing yet
+func fuzz(url string, httpClient *http.Client, writer *bufio.Writer) {
+	fuzzResp, fuzzErr := httpClient.Get(url)
+	if fuzzResp != nil {
+		writer.WriteString("[" + strconv.Itoa(fuzzResp.StatusCode) + "] " + url + "\n")
+	} else {
+		if fuzzErr != nil {
+			writer.WriteString("Fuzzer error " + fuzzErr.Error() + " - " + url + "\n")
+		}
+	}
 }
 
 func main() {
@@ -91,7 +101,6 @@ func main() {
 		panic(urlErr)
 	}
 
-	var output *os.File
 	var openErr error
 	if len(*outFile) > 0 {
 		output, openErr = os.OpenFile(*outFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
@@ -123,7 +132,8 @@ func main() {
 			writer.WriteString(fullUrl + "\n")
 			writer.Flush()
 		} else {
-			fuzz(fullUrl, httpClient)
+			fuzz(fullUrl, httpClient, writer)
+			writer.Flush()
 		}
 	}
 }
