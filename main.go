@@ -6,11 +6,13 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
+	"math/rand"
 	"net/http"
 	"net/url"
 	"os"
 	"strconv"
 	"strings"
+	"time"
 	"waggers/internal/swagger"
 )
 
@@ -84,6 +86,7 @@ func fuzz(url string, httpClient *http.Client, writer *bufio.Writer) {
 
 func main() {
 	printBanner()
+	rand.Seed(time.Now().UnixNano()) // seed random generator
 
 	dryRun := flag.Bool("dryrun", true, "Only print URLs, no fuzzing")
 	outFile := flag.String("file", "", "Output file")

@@ -1,6 +1,7 @@
 package swagger
 
 import (
+	"math/rand"
 	"strings"
 
 	fuzz "github.com/google/gofuzz"
@@ -25,14 +26,15 @@ type SwaggerApiParam struct {
 
 func (p *SwaggerApiParam) Fuzz() interface{} {
 	var fuzzedValue interface{}
-	switch p.Type {
-	case Integer:
+	randomFloat := rand.Float32()
+	switch {
+	case randomFloat <= 0.33:
 		{
 			var paramInt int64
 			fuzzer.Fuzz(&paramInt)
 			fuzzedValue = paramInt
 		}
-	case Float:
+	case randomFloat > 0.33 && randomFloat <= 0.66:
 		{
 			var paramNum float64
 			fuzzer.Fuzz(&paramNum)
