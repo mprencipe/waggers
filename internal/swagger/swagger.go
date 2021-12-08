@@ -27,24 +27,19 @@ type SwaggerApiParam struct {
 func (p *SwaggerApiParam) Fuzz() interface{} {
 	var fuzzedValue interface{}
 	randomFloat := rand.Float32()
-	switch {
-	case randomFloat <= 0.33:
-		{
+	if randomFloat < 0.5 {
+		var paramStr string
+		fuzzer.Fuzz(&paramStr)
+		fuzzedValue = paramStr
+	} else {
+		if randomFloat <= 0.75 {
 			var paramInt int64
 			fuzzer.Fuzz(&paramInt)
 			fuzzedValue = paramInt
-		}
-	case randomFloat > 0.33 && randomFloat <= 0.66:
-		{
+		} else {
 			var paramNum float64
 			fuzzer.Fuzz(&paramNum)
 			fuzzedValue = paramNum
-		}
-	default:
-		{
-			var paramStr string
-			fuzzer.Fuzz(&paramStr)
-			fuzzedValue = paramStr
 		}
 	}
 	return fuzzedValue
