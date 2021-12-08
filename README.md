@@ -33,5 +33,4 @@ https://petstore.swagger.io/pet/findByTags?tags=Ć4癶$
 https://petstore.swagger.io/pet/-582776452570529845
 https://petstore.swagger.io/store/order/2367787863121478808
 https://petstore.swagger.io/pet/findByStatus?status=暐!ü嚀渣ƙlȬ秡韫镰qʋ
-
 ```
