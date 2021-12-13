@@ -89,12 +89,21 @@ func main() {
 	rand.Seed(time.Now().UnixNano()) // seed random generator
 
 	dryRun := flag.Bool("dryrun", true, "Only print URLs, no fuzzing")
+	fuzzCount := flag.Int("fuzzcount", 1, "How many fuzzable URLs should be generated/fuzzed, the default is 1")
 	outFile := flag.String("file", "", "Output file")
 	flag.Parse()
 	flag.Usage = usage
 
 	if flag.NArg() == 0 {
 		flag.Usage()
+		os.Exit(1)
+	}
+
+	if *fuzzCount <= 0 {
+		fmt.Println("Fuzz count must be greater than 0")
+		os.Exit(1)
+	} else if *fuzzCount > 1000 {
+		fmt.Println("Limit of fuzzable URLs is 1000")
 		os.Exit(1)
 	}
 
@@ -129,14 +138,16 @@ func main() {
 			continue
 		}
 
-		fullUrl := url.Scheme + "://" + swaggerResp.Host + buildApiPath(&api)
+		for i := 0; i < *fuzzCount; i++ {
+			fullUrl := url.Scheme + "://" + swaggerResp.Host + buildApiPath(&api)
 
-		if *dryRun {
-			writer.WriteString(fullUrl + "\n")
-			writer.Flush()
-		} else {
-			fuzz(fullUrl, httpClient, writer)
-			writer.Flush()
+			if *dryRun {
+				writer.WriteString(fullUrl + "\n")
+				writer.Flush()
+			} else {
+				fuzz(fullUrl, httpClient, writer)
+				writer.Flush()
+			}
 		}
 	}
 }
