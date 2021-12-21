@@ -12,6 +12,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 	"waggers/internal/swagger"
 )
@@ -26,7 +27,7 @@ const banner = `
 var output *os.File
 
 func printBanner() {
-	fmt.Println(banner)
+	fmt.Print(banner)
 }
 
 func getSwaggerResponse(url string, httpClient *http.Client) *swagger.SwaggerResponse {
@@ -44,7 +45,7 @@ func getSwaggerResponse(url string, httpClient *http.Client) *swagger.SwaggerRes
 
 	unmarshalErr := json.Unmarshal(body, &swaggerResp)
 	if unmarshalErr != nil {
-		panic(unmarshalErr)
+		panic("JSON parsing error " + unmarshalErr.Error())
 	}
 
 	return &swaggerResp
@@ -73,7 +74,8 @@ func buildApiPath(api *swagger.SwaggerApiProps) string {
 	return ret
 }
 
-func fuzz(url string, httpClient *http.Client, writer *bufio.Writer) {
+func fuzz(url string, httpClient *http.Client, writer *bufio.Writer, wg *sync.WaitGroup) {
+	defer wg.Done()
 	fuzzResp, fuzzErr := httpClient.Get(url)
 	if fuzzResp != nil {
 		writer.WriteString("[" + strconv.Itoa(fuzzResp.StatusCode) + "] " + url + "\n")
@@ -86,7 +88,7 @@ func fuzz(url string, httpClient *http.Client, writer *bufio.Writer) {
 
 func main() {
 	printBanner()
-	rand.Seed(time.Now().UnixNano()) // seed random generator
+	rand.Seed(time.Now().UnixNano())
 
 	dryRun := flag.Bool("dryrun", true, "Only print URLs, no fuzzing")
 	fuzzCount := flag.Int("fuzzcount", 1, "How many fuzzable URLs should be generated/fuzzed, the default is 1")
@@ -133,6 +135,9 @@ func main() {
 		fmt.Println()
 	}
 
+	var wg sync.WaitGroup
+	start := time.Now()
+
 	for _, api := range parsed.Paths {
 		if len(api.Params) == 0 {
 			continue
@@ -145,9 +150,15 @@ func main() {
 				writer.WriteString(fullUrl + "\n")
 				writer.Flush()
 			} else {
-				fuzz(fullUrl, httpClient, writer)
+				go fuzz(fullUrl, httpClient, writer, &wg)
+				wg.Add(1)
 				writer.Flush()
 			}
 		}
+	}
+
+	wg.Wait()
+	if !*dryRun {
+		fmt.Printf("Fuzzing took %s", time.Since(start))
 	}
 }
