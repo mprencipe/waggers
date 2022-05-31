@@ -24,7 +24,8 @@ type ApiProps struct {
 }
 
 type SwaggerResponse struct {
-	Swagger string `json:"swagger"`
+	Swagger *string `json:"swagger"`
+	OpenApi *string `json:"openapi"`
 	Info    struct {
 		Description    string `json:"description"`
 		Version        string `json:"version"`
@@ -39,8 +40,8 @@ type SwaggerResponse struct {
 			URL  string `json:"url"`
 		} `json:"license"`
 	} `json:"info"`
-	Host     string `json:"host"`
-	BasePath string `json:"basePath"`
+	Host     *string `json:"host"`
+	BasePath string  `json:"basePath"`
 	Tags     []struct {
 		Name        string `json:"name"`
 		Description string `json:"description"`
@@ -49,6 +50,9 @@ type SwaggerResponse struct {
 	Paths    map[string]struct {
 		Get ApiProps
 	} `json:"paths"`
+	Servers []struct {
+		Url string `json:"url"`
+	} `json:"servers"`
 	Definitions         map[string]interface{} `json:"definitions"`
 	SecurityDefinitions interface{}            `json:"securityDefinitions"`
 }

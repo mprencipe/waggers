@@ -84,6 +84,18 @@ func fuzz(url string, httpClient *http.Client, writer *bufio.Writer, wg *sync.Wa
 			writer.WriteString("Fuzzer error " + fuzzErr.Error() + " - " + url + "\n")
 		}
 	}
+	writer.Flush()
+}
+
+func getHostName(swaggerResp swagger.SwaggerResponse) string {
+	if swaggerResp.OpenApi != nil {
+		if swaggerResp.Servers == nil || len(swaggerResp.Servers) == 0 {
+			fmt.Println("Null or empty array in OpenAPI definition")
+			os.Exit(1)
+		}
+		return *&swaggerResp.Servers[0].Url
+	}
+	return *swaggerResp.Host
 }
 
 func main() {
@@ -138,13 +150,23 @@ func main() {
 	var wg sync.WaitGroup
 	start := time.Now()
 
+	scheme := url.Scheme + "://"
+
 	for _, api := range parsed.Paths {
 		if len(api.Params) == 0 {
 			continue
 		}
 
 		for i := 0; i < *fuzzCount; i++ {
-			fullUrl := url.Scheme + "://" + swaggerResp.Host + buildApiPath(&api)
+			fullUrl := getHostName(*swaggerResp) + buildApiPath(&api)
+			_, parseErr := url.Parse(fullUrl)
+			if parseErr != nil {
+				fmt.Println("Invalid url " + fullUrl)
+				os.Exit(1)
+			}
+			if !strings.HasPrefix(fullUrl, scheme) {
+				fullUrl = scheme + fullUrl
+			}
 
 			if *dryRun {
 				writer.WriteString(fullUrl + "\n")
@@ -152,12 +174,12 @@ func main() {
 			} else {
 				go fuzz(fullUrl, httpClient, writer, &wg)
 				wg.Add(1)
-				writer.Flush()
 			}
 		}
 	}
 
 	wg.Wait()
+
 	if !*dryRun {
 		fmt.Printf("Fuzzing took %s", time.Since(start))
 	}
