@@ -95,17 +95,16 @@ func buildApiPath(api *swagger.SwaggerApiProps) string {
 	return ret
 }
 
-func fuzz(url string, httpClient *http.Client, writer *bufio.Writer, wg *sync.WaitGroup) {
+func fuzz(url string, httpClient *http.Client, fuzzChannel chan string, wg *sync.WaitGroup) {
 	defer wg.Done()
 	fuzzResp, fuzzErr := httpClient.Get(url)
 	if fuzzResp != nil {
-		writer.WriteString("[" + strconv.Itoa(fuzzResp.StatusCode) + "] " + url + "\n")
+		fuzzChannel <- "[" + strconv.Itoa(fuzzResp.StatusCode) + "] " + url + "\n"
 	} else {
 		if fuzzErr != nil {
-			writer.WriteString("Fuzzer error " + fuzzErr.Error() + " - " + url + "\n")
+			fuzzChannel <- "Fuzzer error " + fuzzErr.Error() + " - " + url + "\n"
 		}
 	}
-	writer.Flush()
 }
 
 func getHostName(swaggerResp swagger.SwaggerResponse) string {
@@ -178,6 +177,7 @@ func main() {
 		if len(api.Params) == 0 {
 			continue
 		}
+		fuzzChannel := make(chan string)
 
 		for i := 0; i < *fuzzCount; i++ {
 			fullUrl, fuzzableUrlErr := buildFuzzableUrl(&api, scheme, hostname)
@@ -188,8 +188,10 @@ func main() {
 				writer.WriteString(fullUrl + "\n")
 				writer.Flush()
 			} else {
-				go fuzz(fullUrl, httpClient, writer, &wg)
 				wg.Add(1)
+				go fuzz(fullUrl, httpClient, fuzzChannel, &wg)
+				fuzzMsg := <-fuzzChannel
+				writer.WriteString(fuzzMsg)
 			}
 		}
 	}
