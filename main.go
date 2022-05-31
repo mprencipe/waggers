@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -54,6 +55,26 @@ func getSwaggerResponse(url string, httpClient *http.Client) *swagger.SwaggerRes
 func usage() {
 	fmt.Println("waggers OPTIONS <url>")
 	flag.PrintDefaults()
+}
+
+func buildFuzzableUrl(api *swagger.SwaggerApiProps, scheme string, hostname string) (string, error) {
+	var fullUrl string
+	for i := 0; i < 10; i++ {
+		tempUrl := hostname + buildApiPath(api)
+		if !strings.HasPrefix(tempUrl, scheme) {
+			tempUrl = scheme + tempUrl
+		}
+		_, parseErr := url.Parse(tempUrl)
+		if parseErr != nil {
+			continue
+		}
+		fullUrl = tempUrl
+		break
+	}
+	if len(fullUrl) > 0 {
+		return fullUrl, nil
+	}
+	return "", errors.New("Couldn't build fuzzable url " + fullUrl)
 }
 
 func buildApiPath(api *swagger.SwaggerApiProps) string {
@@ -151,6 +172,7 @@ func main() {
 	start := time.Now()
 
 	scheme := url.Scheme + "://"
+	hostname := getHostName(*swaggerResp)
 
 	for _, api := range parsed.Paths {
 		if len(api.Params) == 0 {
@@ -158,16 +180,10 @@ func main() {
 		}
 
 		for i := 0; i < *fuzzCount; i++ {
-			fullUrl := getHostName(*swaggerResp) + buildApiPath(&api)
-			_, parseErr := url.Parse(fullUrl)
-			if parseErr != nil {
-				fmt.Println("Invalid url " + fullUrl)
-				os.Exit(1)
+			fullUrl, fuzzableUrlErr := buildFuzzableUrl(&api, scheme, hostname)
+			if fuzzableUrlErr != nil {
+				fmt.Println("Couldn't build fuzzable URL for " + api.Path)
 			}
-			if !strings.HasPrefix(fullUrl, scheme) {
-				fullUrl = scheme + fullUrl
-			}
-
 			if *dryRun {
 				writer.WriteString(fullUrl + "\n")
 				writer.Flush()
