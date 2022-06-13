@@ -57,10 +57,10 @@ func usage() {
 	flag.PrintDefaults()
 }
 
-func buildFuzzableUrl(api *swagger.SwaggerApiProps, scheme string, hostname string) (string, error) {
+func buildFuzzableUrl(api *swagger.SwaggerApiProps, scheme string, hostname string, fuzzword string) (string, error) {
 	var fullUrl string
 	for i := 0; i < 10; i++ {
-		tempUrl := hostname + buildApiPath(api)
+		tempUrl := hostname + buildApiPath(api, fuzzword)
 		if !strings.HasPrefix(tempUrl, scheme) {
 			tempUrl = scheme + tempUrl
 		}
@@ -77,13 +77,19 @@ func buildFuzzableUrl(api *swagger.SwaggerApiProps, scheme string, hostname stri
 	return "", errors.New("Couldn't build fuzzable url " + fullUrl)
 }
 
-func buildApiPath(api *swagger.SwaggerApiProps) string {
+func buildApiPath(api *swagger.SwaggerApiProps, fuzzword string) string {
 	ret := api.Path + "?"
 	for i, param := range api.Params {
-		if param.IsPathVariable {
-			ret = strings.Replace(ret, "{"+param.Name+"}", fmt.Sprintf("%v", param.Fuzz()), 1)
+		var actualFuzzWord interface{}
+		if len(fuzzword) == 0 {
+			actualFuzzWord = param.Fuzz()
 		} else {
-			ret += param.Name + "=" + fmt.Sprintf("%v", param.Fuzz())
+			actualFuzzWord = fuzzword
+		}
+		if param.IsPathVariable {
+			ret = strings.Replace(ret, "{"+param.Name+"}", fmt.Sprintf("%v", actualFuzzWord), 1)
+		} else {
+			ret += param.Name + "=" + fmt.Sprintf("%v", actualFuzzWord)
 			if i != len(api.Params)-1 {
 				ret += "&"
 			}
@@ -124,6 +130,7 @@ func main() {
 
 	dryRun := flag.Bool("dryrun", true, "Only print URLs, no fuzzing")
 	fuzzCount := flag.Int("fuzzcount", 1, "How many fuzzable URLs should be generated/fuzzed, the default is 1")
+	fuzzWord := flag.String("fuzzword", "", "A custom fuzz word (e.g. FUZZ) inserted into URLs. Using a fuzz word ignores the fuzz count flag.")
 	outFile := flag.String("file", "", "Output file")
 	flag.Parse()
 	flag.Usage = usage
@@ -180,7 +187,7 @@ func main() {
 		fuzzChannel := make(chan string)
 
 		for i := 0; i < *fuzzCount; i++ {
-			fullUrl, fuzzableUrlErr := buildFuzzableUrl(&api, scheme, hostname)
+			fullUrl, fuzzableUrlErr := buildFuzzableUrl(&api, scheme, hostname, *fuzzWord)
 			if fuzzableUrlErr != nil {
 				fmt.Println("Couldn't build fuzzable URL for " + api.Path)
 			}
