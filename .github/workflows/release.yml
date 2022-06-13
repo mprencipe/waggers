@@ -1,0 +1,22 @@
+name: Release binaries
+on:
+  release:
+    types: [created]
+jobs:
+  releases-matrix:
+    name: Release binary
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        goos: [linux, darwin, windows]
+        goarch: [amd64]
+    steps:
+      - uses: actions/checkout@v2
+      - uses: wangyoucao577/go-release-action@v78336987483c88318722822d9c0d207a28e61b7a
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          goos: ${{ matrix.goos }}
+          goarch: ${{ matrix.goarch }}
+          binary_name: "waggers"
+          ldflags: "-s -w"
+          extra_files: LICENSE
