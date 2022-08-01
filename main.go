@@ -132,6 +132,8 @@ func main() {
 	fuzzCount := flag.Int("fuzzcount", 1, "How many fuzzable URLs should be generated/fuzzed, the default is 1")
 	fuzzWord := flag.String("fuzzword", "", "A custom fuzz word (e.g. FUZZ) inserted into URLs. Using a fuzz word ignores the fuzz count flag.")
 	outFile := flag.String("file", "", "Output file")
+	shuffle := flag.Bool("shuffle", false, "Shuffle URL list")
+
 	flag.Parse()
 	flag.Usage = usage
 
@@ -168,6 +170,12 @@ func main() {
 	httpClient := &http.Client{}
 	swaggerResp := getSwaggerResponse(urlArg, httpClient)
 	parsed := swagger.ParseSwagger(swaggerResp)
+	paths := parsed.Paths
+
+	if *shuffle {
+		rand.Seed(time.Now().UnixNano())
+		rand.Shuffle(len(paths), func(i, j int) { paths[i], paths[j] = paths[j], paths[i] })
+	}
 
 	if *dryRun {
 		fmt.Println("Dry run, just printing URLs. Use -dryrun=false to fuzz.")
@@ -180,7 +188,7 @@ func main() {
 	scheme := url.Scheme + "://"
 	hostname := getHostName(*swaggerResp)
 
-	for _, api := range parsed.Paths {
+	for _, api := range paths {
 		if len(api.Params) == 0 {
 			continue
 		}
