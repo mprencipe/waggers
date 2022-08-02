@@ -173,7 +173,6 @@ func main() {
 	paths := parsed.Paths
 
 	if *shuffle {
-		rand.Seed(time.Now().UnixNano())
 		rand.Shuffle(len(paths), func(i, j int) { paths[i], paths[j] = paths[j], paths[i] })
 	}
 
