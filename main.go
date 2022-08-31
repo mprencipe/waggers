@@ -101,9 +101,17 @@ func buildApiPath(api *swagger.SwaggerApiProps, fuzzword string) string {
 	return ret
 }
 
-func fuzz(url string, httpClient *http.Client, fuzzChannel chan string, wg *sync.WaitGroup) {
+func fuzz(url string, httpHeaders []string, httpClient *http.Client, fuzzChannel chan string, wg *sync.WaitGroup) {
 	defer wg.Done()
-	fuzzResp, fuzzErr := httpClient.Get(url)
+	req, reqErr := http.NewRequest("GET", url, nil)
+	for _, header := range httpHeaders {
+		headerSplit := strings.Split(header, ":")
+		req.Header.Add(headerSplit[0], headerSplit[1])
+	}
+	if reqErr != nil {
+		fuzzChannel <- "HTTP client error " + reqErr.Error() + " - " + url + "\n"
+	}
+	fuzzResp, fuzzErr := httpClient.Do(req)
 	if fuzzResp != nil {
 		fuzzChannel <- "[" + strconv.Itoa(fuzzResp.StatusCode) + "] " + url + "\n"
 	} else {
@@ -128,9 +136,12 @@ func main() {
 	printBanner()
 	rand.Seed(time.Now().UnixNano())
 
+	var customHeaders []string
+
 	dryRun := flag.Bool("dryrun", true, "Only print URLs, no fuzzing")
 	fuzzCount := flag.Int("fuzzcount", 1, "How many fuzzable URLs should be generated/fuzzed, the default is 1")
 	fuzzWord := flag.String("fuzzword", "", "A custom fuzz word (e.g. FUZZ) inserted into URLs. Using a fuzz word ignores the fuzz count flag.")
+	customHeadersArg := flag.String("headers", "", "Custom HTTP headers separated with a comma, e.g. 'Content-Type: application/json,User-Agent:foobar.'")
 	outFile := flag.String("file", "", "Output file")
 	shuffle := flag.Bool("shuffle", false, "Shuffle URL list")
 
@@ -148,6 +159,10 @@ func main() {
 	} else if *fuzzCount > 1000 {
 		fmt.Println("Limit of fuzzable URLs is 1000")
 		os.Exit(1)
+	}
+
+	if len(*customHeadersArg) > 0 {
+		customHeaders = strings.Split(*customHeadersArg, ",")
 	}
 
 	urlArg := flag.Arg(0)
@@ -203,7 +218,7 @@ func main() {
 				writer.Flush()
 			} else {
 				wg.Add(1)
-				go fuzz(fullUrl, httpClient, fuzzChannel, &wg)
+				go fuzz(fullUrl, customHeaders, httpClient, fuzzChannel, &wg)
 				fuzzMsg := <-fuzzChannel
 				writer.WriteString(fuzzMsg)
 			}
