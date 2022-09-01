@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"crypto/tls"
+	base64 "encoding/base64"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -146,6 +147,7 @@ func main() {
 	outFile := flag.String("file", "", "Output file")
 	shuffle := flag.Bool("shuffle", false, "Shuffle URL list")
 	ignoreCertErrors := flag.Bool("ignorecert", false, "Ignore certificate errors")
+	basicAuth := flag.String("basicauth", "", "Convenience method for basic authentication, e.g. user:pass")
 
 	flag.Parse()
 	flag.Usage = usage
@@ -169,6 +171,11 @@ func main() {
 
 	if *ignoreCertErrors {
 		http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+	}
+
+	if len(*basicAuth) > 0 {
+		encodedAuth := base64.StdEncoding.EncodeToString([]byte(*basicAuth))
+		customHeaders = append(customHeaders, "Authorization:Basic "+encodedAuth)
 	}
 
 	urlArg := flag.Arg(0)
