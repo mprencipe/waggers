@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -144,6 +145,7 @@ func main() {
 	customHeadersArg := flag.String("headers", "", "Custom HTTP headers separated with a comma, e.g. 'Content-Type: application/json,User-Agent:foobar.'")
 	outFile := flag.String("file", "", "Output file")
 	shuffle := flag.Bool("shuffle", false, "Shuffle URL list")
+	ignoreCertErrors := flag.Bool("ignorecert", false, "Ignore certificate errors")
 
 	flag.Parse()
 	flag.Usage = usage
@@ -163,6 +165,10 @@ func main() {
 
 	if len(*customHeadersArg) > 0 {
 		customHeaders = strings.Split(*customHeadersArg, ",")
+	}
+
+	if *ignoreCertErrors {
+		http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 	}
 
 	urlArg := flag.Arg(0)
