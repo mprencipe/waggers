@@ -97,9 +97,8 @@ func buildApiPath(api *swagger.SwaggerApiProps, fuzzword string) string {
 			}
 		}
 	}
-	if strings.HasSuffix(ret, "?") {
-		ret = ret[:len(ret)-1]
-	}
+	ret = strings.TrimSuffix(ret, "?")
+
 	return ret
 }
 
