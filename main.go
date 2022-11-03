@@ -129,7 +129,7 @@ func getHostName(swaggerResp swagger.SwaggerResponse) string {
 			fmt.Println("Null or empty array in OpenAPI definition")
 			os.Exit(1)
 		}
-		return *&swaggerResp.Servers[0].Url
+		return swaggerResp.Servers[0].Url
 	}
 	return *swaggerResp.Host
 }
