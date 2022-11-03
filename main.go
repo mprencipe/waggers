@@ -97,9 +97,8 @@ func buildApiPath(api *swagger.SwaggerApiProps, fuzzword string) string {
 			}
 		}
 	}
-	if strings.HasSuffix(ret, "?") {
-		ret = ret[:len(ret)-1]
-	}
+	ret = strings.TrimSuffix(ret, "?")
+
 	return ret
 }
 
@@ -129,7 +128,7 @@ func getHostName(swaggerResp swagger.SwaggerResponse) string {
 			fmt.Println("Null or empty array in OpenAPI definition")
 			os.Exit(1)
 		}
-		return *&swaggerResp.Servers[0].Url
+		return swaggerResp.Servers[0].Url
 	}
 	return *swaggerResp.Host
 }
@@ -216,6 +215,8 @@ func main() {
 	hostname := getHostName(*swaggerResp)
 
 	for _, api := range paths {
+		api := api
+
 		if len(api.Params) == 0 {
 			continue
 		}
