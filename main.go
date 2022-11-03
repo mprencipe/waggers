@@ -216,6 +216,8 @@ func main() {
 	hostname := getHostName(*swaggerResp)
 
 	for _, api := range paths {
+		api := api
+
 		if len(api.Params) == 0 {
 			continue
 		}
