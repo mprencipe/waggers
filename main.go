@@ -123,15 +123,11 @@ func fuzz(url string, httpHeaders []string, httpClient *http.Client, fuzzChannel
 	}
 }
 
-func getHostName(swaggerResp swagger.SwaggerResponse) string {
+func getHostName(swaggerResp swagger.SwaggerResponse) *string {
 	if swaggerResp.OpenApi != nil {
-		if swaggerResp.Servers == nil || len(swaggerResp.Servers) == 0 {
-			fmt.Println("Null or empty array in OpenAPI definition")
-			os.Exit(1)
-		}
-		return *&swaggerResp.Servers[0].Url
+		return nil
 	}
-	return *swaggerResp.Host
+	return swaggerResp.Host
 }
 
 func main() {
@@ -214,6 +210,9 @@ func main() {
 
 	scheme := url.Scheme + "://"
 	hostname := getHostName(*swaggerResp)
+	if hostname == nil {
+		hostname = &url.Host
+	}
 
 	for _, api := range paths {
 		if len(api.Params) == 0 {
@@ -222,7 +221,7 @@ func main() {
 		fuzzChannel := make(chan string)
 
 		for i := 0; i < *fuzzCount; i++ {
-			fullUrl, fuzzableUrlErr := buildFuzzableUrl(&api, scheme, hostname, *fuzzWord)
+			fullUrl, fuzzableUrlErr := buildFuzzableUrl(&api, scheme, *hostname, *fuzzWord)
 			if fuzzableUrlErr != nil {
 				fmt.Println("Couldn't build fuzzable URL for " + api.Path)
 			}
